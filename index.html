@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,8 +11,8 @@ body{margin:0;background:#101326;color:white;font-family:Arial,sans-serif;text-a
 .container{max-width:650px;margin:40px auto;background:#202542;padding:30px;border-radius:18px}
 h1{color:#8b9cff}
 p{color:#ddd;line-height:1.6}
-input,textarea{width:100%;padding:14px;margin:12px 0;border-radius:9px;border:0}
-button{padding:14px 25px;border:0;border-radius:9px;background:#6578ff;color:white;font-size:16px;margin:5px}
+input,textarea,select{width:100%;padding:14px;margin:12px 0;border-radius:9px;border:0}
+button{padding:14px 25px;border:0;border-radius:9px;background:#6578ff;color:white;font-size:16px;margin:5px;cursor:pointer}
 .note{font-size:13px;color:#b9c2ff}
 </style>
 </head>
@@ -21,13 +22,25 @@ button{padding:14px 25px;border:0;border-radius:9px;background:#6578ff;color:whi
 <h2>AI Photo & Video Generator</h2>
 <p>Create amazing AI images and videos with your ideas.</p>
 <h3>Enter Your Prompt</h3>
-<textarea rows="4" placeholder="Describe what you want to create..."></textarea>
+<textarea id="prompt" rows="4" placeholder="Describe what you want to create..."></textarea>
 <h3>Upload Your Image</h3>
-<input type="file" accept="image/*">
+<input type="file" id="image" accept="image/*">
 <h3>Choose Generation Type</h3>
-<button onclick="alert('AI generation API will be connected in the next step.')">Generate Photo</button>
-<button onclick="alert('AI video API will be connected in the next step.')">Generate Video</button>
-<p class="note">AI generation services will be connected later.</p>
+<select id="type">
+<option value="image">Generate Photo</option>
+<option value="video">Generate Video</option>
+</select>
+<button onclick="generate()">Generate</button>
+<p id="status" class="note">AI service is not connected yet.</p>
 </div>
+<script>
+async function generate(){
+const prompt=document.getElementById("prompt").value.trim();
+const type=document.getElementById("type").value;
+const status=document.getElementById("status");
+if(!prompt){status.textContent="Please enter a prompt.";return;}
+status.textContent="Backend connection is not configured yet.";
+}
+</script>
 </body>
 </html>
