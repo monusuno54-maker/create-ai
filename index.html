@@ -1,45 +1,160 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CREATE AI - Photo & Video Generator</title>
+<title>CREATE AI</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#101326;color:white;font-family:Arial,sans-serif;text-align:center;padding:30px 15px}
-.container{max-width:650px;margin:40px auto;background:#202542;padding:30px;border-radius:18px}
-h1{color:#8b9cff}
-p{color:#ddd;line-height:1.6}
-input,textarea,select{width:100%;padding:14px;margin:12px 0;border-radius:9px;border:0}
-button{padding:14px 25px;border:0;border-radius:9px;background:#6578ff;color:white;font-size:16px;margin:5px;cursor:pointer}
-.note{font-size:13px;color:#b9c2ff}
+body{margin:0;padding:20px 12px;background:#101326;color:white;font-family:Arial,sans-serif}
+.container{max-width:680px;margin:25px auto;padding:25px;background:#202542;border-radius:16px}
+h1,h2{text-align:center;color:#89b9ff}
+label{display:block;margin-top:18px;font-weight:bold}
+textarea,input{width:100%;margin-top:9px;padding:13px;border:0;border-radius:9px;font-size:15px}
+textarea{min-height:115px}
+button{width:100%;padding:14px;margin-top:12px;border:0;border-radius:9px;background:#6578ff;color:white;font-size:16px;cursor:pointer}
+button:disabled{opacity:.6}
+.secondary{background:#39466f}
+.note{color:#b9c8ef;font-size:13px}
+img{display:block;max-width:100%;height:auto;margin:15px auto;border-radius:10px}
+.hidden{display:none}
+.section{margin-top:25px;padding-top:15px;border-top:1px solid #424b70}
 </style>
 </head>
 <body>
-<div class="container">
+<main class="container">
 <h1>CREATE AI</h1>
-<h2>AI Photo & Video Generator</h2>
-<p>Create amazing AI images and videos with your ideas.</p>
-<h3>Enter Your Prompt</h3>
-<textarea id="prompt" rows="4" placeholder="Describe what you want to create..."></textarea>
-<h3>Upload Your Image</h3>
-<input type="file" id="image" accept="image/*">
-<h3>Choose Generation Type</h3>
-<select id="type">
-<option value="image">Generate Photo</option>
-<option value="video">Generate Video</option>
-</select>
-<button onclick="generate()">Generate</button>
-<p id="status" class="note">AI service is not connected yet.</p>
-</div>
+<h2>AI Photo & Video Prompt Generator</h2>
+<p>Create AI images and video prompts with your ideas.</p>
+
+<section>
+<h3>AI Photo Generator</h3>
+<label for="photoPrompt">Enter Your Photo Prompt</label>
+<textarea id="photoPrompt" maxlength="2000" placeholder="Describe the image you want to create..."></textarea>
+
+<label for="imageUpload">Upload Your Image (Preview Only)</label>
+<input id="imageUpload" type="file" accept="image/*">
+<img id="uploadPreview" class="hidden" alt="Uploaded image preview">
+
+<button id="photoButton" type="button" onclick="generatePhoto()">Generate Photo</button>
+<p id="photoStatus" class="note">Ready. Enter a prompt to generate an image.</p>
+<img id="generatedImage" class="hidden" alt="Generated AI image">
+<a id="downloadImage" class="hidden" download="create-ai-image.jpg">
+<button type="button" class="secondary">Download Generated Photo</button>
+</a>
+</section>
+
+<section class="section">
+<h3>AI Video Prompt Generator</h3>
+<label for="videoIdea">Describe Your Video Idea</label>
+<textarea id="videoIdea" placeholder="Describe your video idea..."></textarea>
+<button type="button" onclick="generateVideoPrompt()">Generate Video Prompt</button>
+
+<label for="videoResult">Your English Video Prompt</label>
+<textarea id="videoResult" readonly placeholder="Your video prompt will appear here..."></textarea>
+<button type="button" class="secondary" onclick="copyVideoPrompt()">Copy Video Prompt</button>
+<button type="button" class="secondary" onclick="downloadVideoPrompt()">Download Video Prompt</button>
+<p class="note">This tool creates text prompts only. It does not render an actual video.</p>
+</section>
+
+<p class="note">Image generation uses Cloudflare Workers AI. Check your free usage allowance before generating. Usage beyond the free allowance may incur charges.</p>
+</main>
+
 <script>
-async function generate(){
-const prompt=document.getElementById("prompt").value.trim();
-const type=document.getElementById("type").value;
-const status=document.getElementById("status");
-if(!prompt){status.textContent="Please enter a prompt.";return;}
-status.textContent="Backend connection is not configured yet.";
+async function generatePhoto(){
+const prompt=document.getElementById("photoPrompt").value.trim();
+const status=document.getElementById("photoStatus");
+const button=document.getElementById("photoButton");
+const image=document.getElementById("generatedImage");
+const download=document.getElementById("downloadImage");
+
+if(!prompt){status.textContent="Please enter a photo prompt.";return}
+if(prompt.length>2000){status.textContent="Prompt is too long.";return}
+
+button.disabled=true;
+button.textContent="Generating...";
+status.textContent="Connecting to AI service...";
+image.classList.add("hidden");
+download.classList.add("hidden");
+
+try{
+const response=await fetch("/api/generate",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({prompt})
+});
+const data=await response.json();
+
+if(!response.ok||!data.success||!data.image){
+throw new Error(data.error||"Image generation failed.");
+}
+
+const imageUrl="data:image/jpeg;base64,"+data.image;
+image.src=imageUrl;
+image.classList.remove("hidden");
+download.href=imageUrl;
+download.classList.remove("hidden");
+status.textContent="Image generated successfully.";
+}catch(error){
+status.textContent="Error: "+error.message;
+}finally{
+button.disabled=false;
+button.textContent="Generate Photo";
+}
+}
+
+document.getElementById("imageUpload").addEventListener("change",function(event){
+const file=event.target.files[0];
+const preview=document.getElementById("uploadPreview");
+if(!file){preview.classList.add("hidden");return}
+if(!file.type.startsWith("image/")){
+document.getElementById("photoStatus").textContent="Please select an image file.";
+event.target.value="";
+return;
+}
+const reader=new FileReader();
+reader.onload=function(){
+preview.src=reader.result;
+preview.classList.remove("hidden");
+};
+reader.readAsDataURL(file);
+});
+
+function generateVideoPrompt(){
+const idea=document.getElementById("videoIdea").value.trim();
+const result=document.getElementById("videoResult");
+if(!idea){result.value="Please describe your video idea first.";return}
+result.value=
+"Create an ultra-realistic cinematic video based on this idea: "+idea+"\n\n"+
+"Visual style: Professional Hollywood cinematography, realistic lighting, detailed environments and natural colors.\n"+
+"Camera: Smooth cinematic camera movement and clear subject framing.\n"+
+"Audio: Natural environmental sounds and realistic sound effects.\n"+
+"Quality: High detail, sharp focus and polished presentation.\n"+
+"Maintain consistent characters, clothing and environments throughout the video. Avoid distorted objects, unwanted text and watermarks.";
+}
+
+async function copyVideoPrompt(){
+const result=document.getElementById("videoResult");
+if(!result.value.trim()){alert("Generate a video prompt first.");return}
+try{
+await navigator.clipboard.writeText(result.value);
+alert("Video prompt copied.");
+}catch(error){
+result.select();
+alert("Please copy the selected text manually.");
+}
+}
+
+function downloadVideoPrompt(){
+const text=document.getElementById("videoResult").value;
+if(!text.trim()){alert("Generate a video prompt first.");return}
+const blob=new Blob([text],{type:"text/plain"});
+const url=URL.createObjectURL(blob);
+const link=document.createElement("a");
+link.href=url;
+link.download="create-ai-video-prompt.txt";
+link.click();
+URL.revokeObjectURL(url);
 }
 </script>
 </body>
